@@ -223,6 +223,48 @@ def divide(
 
     return a / b
 
+# =========================================================
+# Percentage Tool
+# Input Validation
+# =========================================================
+
+@mcp.tool()
+def percentage(
+    value: float,
+    percent: float
+) -> float:
+
+    # Authorization
+    require_scope("calculator")
+
+    logger.info(
+        "percentage() called with value=%s, percent=%s",
+        value,
+        percent
+    )
+
+    # Validate percentage range
+    if percent < 0 or percent > 100:
+
+        logger.warning(
+            "Invalid percentage: %s",
+            percent
+        )
+
+        raise ValueError(
+            "Percent must be between 0 and 100"
+        )
+
+    # Calculate percentage
+    result = value * (percent / 100)
+
+    logger.info(
+        "Percentage result: %s",
+        result
+    )
+
+    return result
+
 
 # =========================================================
 # Admin Tool
@@ -355,7 +397,23 @@ This calculator supports four operations:
 3. Multiplication
 4. Division
 """
+# =========================================================
+# Secure Resource Template
+# =========================================================
 
+@mcp.resource(
+    "calculator://history/{filename}"
+)
+def calculator_history(
+    filename: str
+) -> str:
+
+    logger.info(
+        "Calculator history requested: %s",
+        filename
+    )
+
+    return f"Calculator history for: {filename}"
 
 # =========================================================
 # Prompt
