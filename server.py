@@ -168,6 +168,51 @@ class RequestTracingMiddleware:
                 ctx.request_id
             )
             raise
+
+# =========================================================
+# Metrics
+# =========================================================
+
+class MetricsMiddleware:
+    def __init__(self):
+        self.total_requests=0
+        self.successful_requests = 0
+        self.failed_requests = 0
+        self.total_duration = 0.0
+    
+    async def __call__(self, ctx, call_next):
+        self.total_requests += 1
+
+        start_time = time.perf_counter()
+
+        try:
+            result = await call_next(ctx)
+
+            self.successful_requests += 1
+
+            return result
+
+        except Exception:
+            self.failed_requests += 1
+            raise
+
+        finally:
+            duration = time.perf_counter() - start_time
+            self.total_duration += duration
+
+            average_duration = (
+                self.total_duration / self.total_requests
+            )
+            logger.info(
+                "Metrics: total=%s successful=%s failed=%s "
+                "total_duration=%.2fs average_duration=%.2fs",
+                self.total_requests,
+                self.successful_requests,
+                self.failed_requests,
+                self.total_duration,
+                average_duration
+            )
+
 # =========================================================
 # Authentication
 # =========================================================
@@ -269,8 +314,12 @@ mcp = MCPServer(
     token_verifier=SimpleTokenVerifier(),
     middleware=[
         RequestLoggingMiddleware(),
-        RateLimitMiddleware(max_requests=100, window_seconds=60),
-         RequestTracingMiddleware()
+        RateLimitMiddleware(
+            max_requests=100,
+            window_seconds=60
+        ),
+        RequestTracingMiddleware(),
+        MetricsMiddleware()
     ]
 )
 
