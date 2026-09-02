@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import time
+import uuid
 from collections import defaultdict
 
 from dotenv import load_dotenv
@@ -132,6 +133,41 @@ class RateLimitMiddleware:
         return await call_next(ctx)
 
 
+#==========================================================
+#RequestTracingMiddleware
+#==========================================================
+
+class RequestTracingMiddleware:
+    async def __call__(self, ctx, call_next):
+        # Generate a unique ID for this request
+        trace_id = str(uuid.uuid4())
+
+        logger.info(
+            "[%s] Request started: method=%s request_id=%s",
+            trace_id,
+            ctx.method,
+            ctx.request_id
+        )
+
+        try:
+            # Continue processing the request
+            result = await call_next(ctx)
+
+            logger.info(
+                "[%s] Request completed: method=%s request_id=%s",
+                trace_id,
+                ctx.method,
+                ctx.request_id
+            )
+            return result
+        except Exception:
+            logger.exception(
+                "[%s] Request failed: method=%s request_id=%s",
+                trace_id,
+                ctx.method,
+                ctx.request_id
+            )
+            raise
 # =========================================================
 # Authentication
 # =========================================================
@@ -233,7 +269,8 @@ mcp = MCPServer(
     token_verifier=SimpleTokenVerifier(),
     middleware=[
         RequestLoggingMiddleware(),
-        RateLimitMiddleware(max_requests=100, window_seconds=60)
+        RateLimitMiddleware(max_requests=100, window_seconds=60),
+         RequestTracingMiddleware()
     ]
 )
 
