@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import time
+from collections import defaultdict
 
 from dotenv import load_dotenv
 
@@ -70,6 +71,66 @@ class RequestLoggingMiddleware:
                 ctx.request_id
             )
             raise
+
+#==========================================================
+#RateLimitMiddleWare
+#==========================================================
+
+class RateLimitMiddleware:
+    def __init__(self, max_requests=100, window_seconds=60):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+
+        # Store request timestamps for each client
+        self.requests = defaultdict(list)
+
+    async def __call__(self, ctx, call_next):
+        # Get the client identifier
+        client_id = "unknown"
+
+        # Check if authentication information is available
+        access_token = get_access_token()
+
+        if access_token is not None:
+            client_id = access_token.client_id
+
+        current_time = time.monotonic()
+
+        # Get previous requests from this client
+        request_times = self.requests[client_id]
+
+        # Remove requests outside the current time window
+        request_times[:] = [
+            timestamp
+            for timestamp in request_times
+            if current_time - timestamp < self.window_seconds
+        ]
+
+        # Check whether the client has reached the limit
+        if len(request_times) >= self.max_requests:
+            logger.warning(
+                "Rate limit exceeded: client=%s requests=%s",
+                client_id,
+                len(request_times)
+            )
+
+            raise PermissionError(
+                "Rate limit exceeded. Try again later."
+            )
+
+        # Record this request
+        request_times.append(current_time)
+
+        logger.info(
+            "Rate limit check passed: client=%s requests=%s/%s",
+            client_id,
+            len(request_times),
+            self.max_requests
+        )
+
+        # Continue processing the request
+        return await call_next(ctx)
+
 
 # =========================================================
 # Authentication
@@ -171,7 +232,8 @@ mcp = MCPServer(
     auth=auth_settings,
     token_verifier=SimpleTokenVerifier(),
     middleware=[
-        RequestLoggingMiddleware()
+        RequestLoggingMiddleware(),
+        RateLimitMiddleware(max_requests=100, window_seconds=60)
     ]
 )
 
