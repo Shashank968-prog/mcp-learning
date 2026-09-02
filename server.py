@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import time
 
 from dotenv import load_dotenv
 
@@ -8,6 +9,7 @@ from mcp.server.mcpserver import MCPServer, Context
 from mcp.server.auth.provider import AccessToken
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.auth.middleware.auth_context import get_access_token
+from mcp.server.mcpserver.server import ServerMiddleware
 
 
 # =========================================================
@@ -35,6 +37,39 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# =========================================================
+# Request Logging Middleware
+# =========================================================
+
+class RequestLoggingMiddleware:
+    async def __call__(self, ctx, call_next):
+        logger.info(
+            "MCP request started: method=%s request_id=%s",
+            ctx.method,
+            ctx.request_id
+        )
+        #start the timer
+
+        start_time=time.perf_counter()
+
+        try:
+            result=await call_next(ctx)
+            duration=time.perf_counter()-start_time
+            logger.info(
+                "MCP request completed: method=%s request_id=%s",
+                ctx.method,
+                ctx.request_id
+            )
+            return result
+        except Exception:
+            # Calculate duration even when the request fails
+            duration = time.perf_counter() - start_time
+            logger.exception(
+                "MCP request failed: method=%s request_id=%s",
+                ctx.method,
+                ctx.request_id
+            )
+            raise
 
 # =========================================================
 # Authentication
@@ -134,7 +169,10 @@ def require_scope(
 mcp = MCPServer(
     "Calculator",
     auth=auth_settings,
-    token_verifier=SimpleTokenVerifier()
+    token_verifier=SimpleTokenVerifier(),
+    middleware=[
+        RequestLoggingMiddleware()
+    ]
 )
 
 
