@@ -303,6 +303,71 @@ def require_scope(
         required_scope
     )
 
+class AuthorizationMiddleware:
+    def __init__(self):
+        self.tool_scopes = {
+            "add": "calculator",
+            "subtract": "calculator",
+            "multiply": "calculator",
+            "divide": "calculator",
+            "percentage": "calculator",
+            "unstable_operation": "calculator",
+            "long_calculation": "calculator",
+            "admin_reset": "admin",
+        }
+
+    async def __call__(self, ctx, call_next):
+        # Only authorize tool calls
+        if ctx.method != "tools/call":
+            return await call_next(ctx)
+
+        # Get the authenticated token
+        access_token = get_access_token()
+
+        if access_token is None:
+            logger.warning(
+                "Authorization denied: no authenticated user"
+            )
+            raise PermissionError("Authentication required")
+
+        # Get the requested tool name
+        tool_name = ctx.params.get("name")
+
+        # Find the required scope
+        required_scope = self.tool_scopes.get(tool_name)
+
+        # If the tool is not in our authorization map,
+        # allow the MCP server to handle it normally.
+        if required_scope is None:
+            logger.info(
+                "Authorization: no specific scope configured for tool=%s",
+                tool_name
+            )
+            return await call_next(ctx)
+
+        # Check whether the user has the required scope
+        if required_scope not in access_token.scopes:
+            logger.warning(
+                "Authorization denied: client=%s tool=%s "
+                "required_scope=%s available_scopes=%s",
+                access_token.client_id,
+                tool_name,
+                required_scope,
+                access_token.scopes
+            )
+
+            raise PermissionError(
+                f"Missing required scope: {required_scope}"
+            )
+
+        logger.info(
+            "Authorization allowed: client=%s tool=%s scope=%s",
+            access_token.client_id,
+            tool_name,
+            required_scope
+        )
+
+        return await call_next(ctx)
 
 # =========================================================
 # MCP Server
@@ -314,11 +379,16 @@ mcp = MCPServer(
     token_verifier=SimpleTokenVerifier(),
     middleware=[
         RequestLoggingMiddleware(),
+
         RateLimitMiddleware(
             max_requests=100,
             window_seconds=60
         ),
+
         RequestTracingMiddleware(),
+
+        AuthorizationMiddleware(),
+
         MetricsMiddleware()
     ]
 )
