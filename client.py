@@ -3,10 +3,15 @@ import logging
 import os
 import random
 
+from click import prompt
 import httpx
+from pathlib import Path
+from mcp import types
 from dotenv import load_dotenv
+from google import genai
 
-from mcp import ClientSession, types
+from mcp import ClientSession
+from mcp.client.session import ClientRequestContext
 from mcp.client.streamable_http import streamable_http_client
 
 
@@ -23,6 +28,9 @@ if not MCP_API_TOKEN:
 
 SERVER_URL = "http://127.0.0.1:8000/mcp"
 
+gemini_client = genai.Client(
+    api_key=os.environ["GEMINI_API_KEY"]
+)
 
 # =========================================================
 # Logging
@@ -313,6 +321,281 @@ async def test_timeout(session):
 
 
 # =========================================================
+# Roots Callback
+# =========================================================
+
+async def list_roots_callback(context):
+
+    # Get the current project directory
+    project_path = Path.cwd()
+
+    # Create an MCP Root
+    root = types.Root(
+        uri=project_path.as_uri(),
+        name=project_path.name
+    )
+
+    logger.info(
+        "Roots requested by server: %s",
+        project_path
+    )
+
+    # Return the Root to the MCP server
+    return types.ListRootsResult(
+        roots=[root]
+    )
+
+
+# =========================================================
+# Roots Test
+# MCP 2026-07-28 Multi-Round-Trip Handling
+# =========================================================
+
+async def test_roots(session):
+    print("\nTesting MCP Roots...")
+
+    input_responses = None
+    request_state = None
+
+    # A modern MCP server can return InputRequiredResult first.
+    # We satisfy the embedded Roots request using the same callback
+    # registered on ClientSession, then retry the tool call.
+    for round_number in range(1, 6):
+        try:
+            result = await session.call_tool(
+                "show_roots",
+                arguments={},
+                input_responses=input_responses,
+                request_state=request_state,
+                allow_input_required=True
+            )
+        except Exception as e:
+            print("\nRoots Error:")
+            print(type(e).__name__)
+            print(e)
+            return
+
+        # Terminal tool result: Roots flow completed.
+        if not isinstance(result, types.InputRequiredResult):
+            print("\nRoots Result:")
+            print(result)
+
+            if getattr(result, "content", None):
+                print("\nRoots Content:")
+                for item in result.content:
+                    text = getattr(item, "text", None)
+                    if text:
+                        print(text)
+
+            return
+
+        print(
+            f"Roots round {round_number}: "
+            "server requested client input"
+        )
+
+        responses = {}
+
+        for key, request in result.input_requests.items():
+            params = request.params
+            meta = params.meta if params is not None else None
+
+            context = ClientRequestContext(
+                session=session,
+                request_id=key,
+                meta=meta
+            )
+
+            response = await session.dispatch_input_request(
+                context,
+                request
+            )
+
+            if isinstance(response, types.ErrorData):
+                raise RuntimeError(
+                    f"Client could not satisfy input request "
+                    f"{key}: {response.message}"
+                )
+
+            responses[key] = response
+
+        input_responses = responses
+        request_state = result.request_state
+
+    raise RuntimeError(
+        "Roots flow exceeded the maximum number of input rounds"
+    )
+
+
+
+# =========================================================
+# MCP Sampling Callback - Real Gemini
+# =========================================================
+
+async def sampling_callback(
+    context: ClientRequestContext,
+    params: types.CreateMessageRequestParams
+) -> types.CreateMessageResult:
+
+    print("\n========================================")
+    print("SAMPLING REQUEST RECEIVED")
+    print("========================================")
+
+    # Show what the MCP server requested
+    print("\nMessages:")
+    print(params.messages)
+
+    print("\nMax Tokens:")
+    print(params.max_tokens)
+
+    print("\nSystem Prompt:")
+    print(params.system_prompt)
+
+    print("\nTemperature:")
+    print(params.temperature)
+
+    # ---------------------------------------------------------
+    # Create the prompt BEFORE using it.
+    #
+    # IMPORTANT:
+    # It is "prompt", not "promt".
+    # ---------------------------------------------------------
+
+    prompt = ""
+
+    # ---------------------------------------------------------
+    # Extract text from every MCP sampling message
+    # ---------------------------------------------------------
+
+    for message in params.messages:
+
+        if isinstance(message.content, types.TextContent):
+
+            prompt += message.content.text + "\n"
+
+    # ---------------------------------------------------------
+    # Add the system prompt
+    # ---------------------------------------------------------
+
+    if params.system_prompt:
+
+        prompt = (
+            params.system_prompt
+            + "\n\n"
+            + prompt
+        )
+        # Make the context explicit for Gemini
+        prompt = (
+             "You are an assistant helping the user learn the "
+    "Model Context Protocol (MCP). "
+    "Answer specifically in the context of MCP.\n\n"
+    + prompt
+)
+
+    print("\nPrompt sent to Gemini:")
+    print("----------------------------------------")
+    print(prompt)
+    print("----------------------------------------")
+
+    # ---------------------------------------------------------
+    # REAL LLM CALL
+    # ---------------------------------------------------------
+    #
+    # The MCP client now sends the prompt to Gemini.
+    # There is NO fake response.
+    # ---------------------------------------------------------
+
+    try:
+        response = await asyncio.to_thread(
+            gemini_client.models.generate_content,
+            model="gemini-2.5-flash",
+            contents=prompt,
+            )
+
+    except Exception as e:
+
+        print("\nGemini API Error:")
+        print(e)
+
+        return types.ErrorData(
+            code=-1,
+            message=f"Gemini API error: {str(e)}"
+        )
+
+    # ---------------------------------------------------------
+    # Get the text generated by Gemini
+    # ---------------------------------------------------------
+
+    response_text = response.text
+
+    print("\nGemini generated:")
+    print("----------------------------------------")
+    print(response_text)
+    print("----------------------------------------")
+
+    # ---------------------------------------------------------
+    # Convert Gemini's response into an MCP response
+    # ---------------------------------------------------------
+
+    return types.CreateMessageResult(
+        role="assistant",
+
+        content=types.TextContent(
+            type="text",
+            text=response_text
+        ),
+
+        model="gemini-2.5-flash",
+
+        stop_reason="endTurn"
+    )
+
+
+# =========================================================
+# Sampling Test
+# =========================================================
+
+async def test_sampling(session):
+    """
+    Test MCP Sampling.
+
+    The MCP server will request an LLM response.
+    The MCP client receives that sampling request,
+    calls Gemini through sampling_callback(),
+    and returns the generated response.
+    """
+
+    print("\nTesting MCP Sampling...")
+
+    try:
+        # Call the MCP tool that triggers sampling
+        result = await session.call_tool(
+            "test_sampling",
+            arguments={}
+        )
+
+        print("\nSampling Result:")
+        print(result)
+
+        print("\nSampling Content:")
+
+        # Read the content returned by the MCP server
+        for item in result.content:
+
+            # Extract text from the returned content
+            text = getattr(item, "text", None)
+
+            if text:
+                print(text)
+
+    except Exception as e:
+
+        print("\nSampling Error:")
+        print(type(e).__name__)
+        print(e)
+
+
+# =========================================================
 # Main
 # =========================================================
 
@@ -340,7 +623,9 @@ async def main():
             async with ClientSession(
                 read_stream,
                 write_stream,
-                message_handler=message_handler
+                message_handler=message_handler,
+                sampling_callback=sampling_callback,
+                list_roots_callback=list_roots_callback
             ) as session:
 
                 # -------------------------------------------------
@@ -375,6 +660,18 @@ async def main():
 
                 for tool in tools.tools:
                     print("-", tool.name)
+
+                # -------------------------------------------------
+                # Roots
+                # -------------------------------------------------
+
+                await test_roots(session)
+
+                # -------------------------------------------------
+                # Sampling
+                # -------------------------------------------------
+
+                await test_sampling(session)
 
                 # -------------------------------------------------
                 # Retry + Jitter

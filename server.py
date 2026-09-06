@@ -4,14 +4,17 @@ import os
 import time
 import uuid
 from collections import defaultdict
+from typing import Annotated
 
 from dotenv import load_dotenv
 
+from mcp import types
 from mcp.server.mcpserver import MCPServer, Context
 from mcp.server.auth.provider import AccessToken
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.mcpserver.server import ServerMiddleware
+from mcp.server.mcpserver.resolve import ListRoots, Resolve, Sample
 
 
 # =========================================================
@@ -392,6 +395,98 @@ mcp = MCPServer(
         MetricsMiddleware()
     ]
 )
+
+# =========================================================
+# Roots - Modern MCP Multi-Round-Trip
+# =========================================================
+
+def request_client_roots() -> ListRoots:
+    """Ask MCPServer to obtain the client's Roots.
+
+    On MCP 2026-07-28+, MCPServer converts this into an
+    InputRequiredResult. On older protocol versions, it can use
+    the legacy request-scoped server-to-client request.
+    """
+    logger.info("Requesting client roots through MCP resolver")
+    return ListRoots()
+
+
+@mcp.tool()
+async def show_roots(
+    roots_result: Annotated[
+        types.ListRootsResult,
+        Resolve(request_client_roots)
+    ]
+) -> str:
+    """Return the Roots supplied by the MCP client."""
+
+    logger.info(
+        "Server received %s root(s)",
+        len(roots_result.roots)
+    )
+
+    if not roots_result.roots:
+        return "Client provided no roots."
+
+    for root in roots_result.roots:
+        logger.info(
+            "Root received: uri=%s name=%s",
+            root.uri,
+            root.name
+        )
+
+    return "\n".join(
+        f"Root: {root.uri} | Name: {root.name}"
+        for root in roots_result.roots
+    )
+
+
+
+# =========================================================
+# Sampling - Fake LLM Demo
+# =========================================================
+
+def request_fake_sampling() -> Sample:
+    """Ask the MCP client to generate an LLM-style response."""
+    logger.info("Server requesting Sampling from client...")
+
+    return Sample(
+        messages=[
+            types.SamplingMessage(
+                role="user",
+                content=types.TextContent(
+                    type="text",
+                    text="Explain MCP Sampling in one simple sentence."
+                )
+            )
+        ],
+        max_tokens=100,
+        system_prompt="You are a helpful MCP learning assistant.",
+        temperature=0.7
+    )
+
+
+@mcp.tool()
+async def test_sampling(
+    sampling_result: Annotated[
+        types.CreateMessageResult,
+        Resolve(request_fake_sampling)
+    ]
+) -> str:
+    """Demonstrate MCP Sampling using the client's sampling callback."""
+
+    logger.info(
+        "Server received Sampling result from model=%s",
+        sampling_result.model
+    )
+
+    content = sampling_result.content
+
+    if isinstance(content, types.TextContent):
+        logger.info("Sampling response text: %s", content.text)
+        return content.text
+
+    return f"Sampling returned non-text content: {content}"
 
 
 # =========================================================
