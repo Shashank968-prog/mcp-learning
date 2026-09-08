@@ -1,0 +1,391 @@
+HEALTHCARE KNOWLEDGE BASE
+
+==================================================
+1. GENERAL HEALTHCARE
+==================================================
+
+Healthcare is the prevention, diagnosis, treatment, and management of diseases,
+illnesses, injuries, and other health conditions. Healthcare can include
+preventive care, primary care, emergency care, specialist care, rehabilitation,
+and long-term disease management.
+
+Preventive healthcare focuses on reducing the risk of illness before a disease
+develops. Examples include vaccinations, health screenings, regular medical
+checkups, maintaining a balanced diet, physical activity, adequate sleep, and
+avoiding tobacco products.
+
+Primary care is usually the first point of contact for many health concerns.
+Primary care professionals can evaluate common illnesses, provide preventive
+care, manage chronic conditions, and refer patients to specialists when needed.
+
+==================================================
+2. DIABETES
+==================================================
+
+Diabetes is a chronic metabolic condition involving elevated blood glucose
+levels. Blood glucose is regulated in part by insulin, a hormone produced by
+the pancreas.
+
+Type 1 diabetes occurs when the immune system destroys insulin-producing beta
+cells in the pancreas. People with type 1 diabetes generally require insulin
+therapy to manage blood glucose.
+
+Type 2 diabetes occurs when the body becomes resistant to insulin and/or does
+not produce enough insulin. Risk factors can include family history, excess
+body weight, physical inactivity, age, and certain other medical conditions.
+
+Common symptoms of diabetes may include increased thirst, frequent urination,
+increased hunger, fatigue, blurred vision, and unexplained weight changes.
+Some people with type 2 diabetes may have few or no noticeable symptoms.
+
+Long-term poorly controlled diabetes can affect blood vessels and nerves and
+increase the risk of complications involving the eyes, kidneys, heart,
+and nervous system.
+
+Diabetes management can involve monitoring blood glucose, nutrition,
+physical activity, medications, and regular medical follow-up.
+
+==================================================
+3. HYPERTENSION
+==================================================
+
+Hypertension, commonly called high blood pressure, occurs when blood pressure
+remains higher than the recommended range over time.
+
+Blood pressure is expressed using two numbers. The systolic pressure represents
+pressure when the heart contracts, while diastolic pressure represents pressure
+when the heart relaxes.
+
+Hypertension often does not cause noticeable symptoms. Because of this, regular
+blood pressure measurement is important.
+
+Long-term uncontrolled hypertension can increase the risk of cardiovascular
+disease, stroke, kidney disease, and other complications.
+
+Lifestyle measures that may help manage blood pressure include reducing sodium
+intake, maintaining a healthy weight, being physically active, avoiding tobacco,
+limiting alcohol, managing stress, and getting adequate sleep.
+
+Some people require prescription medications to control blood pressure.
+
+==================================================
+4. HEART DISEASE
+==================================================
+
+Cardiovascular disease refers to conditions affecting the heart and blood
+vessels.
+
+Coronary artery disease occurs when plaque builds up in the arteries that supply
+blood to the heart muscle. This can reduce blood flow and may contribute to
+chest discomfort or a heart attack.
+
+A heart attack occurs when blood flow to part of the heart muscle is blocked
+or severely reduced. Possible symptoms include chest pressure or discomfort,
+shortness of breath, sweating, nausea, and discomfort that may spread to the
+arm, shoulder, back, neck, or jaw.
+
+Heart failure occurs when the heart cannot pump blood sufficiently to meet the
+body's needs. Symptoms may include shortness of breath, fatigue, and swelling
+in the legs or ankles.
+
+Risk factors for cardiovascular disease include high blood pressure, diabetes,
+high cholesterol, smoking, physical inactivity, obesity, age, and family
+history.
+
+==================================================
+5. ASTHMA
+==================================================
+
+Asthma is a chronic condition affecting the airways. The airways can become
+inflamed and narrowed, making breathing difficult.
+
+Common asthma symptoms include wheezing, coughing, chest tightness, and
+shortness of breath.
+
+Asthma symptoms can be triggered by allergens, respiratory infections, smoke,
+air pollution, exercise, cold air, and other environmental factors.
+
+Asthma treatment can include quick-relief medicines for acute symptoms and
+long-term controller medicines for people who need them.
+
+An asthma action plan can help patients recognize worsening symptoms and know
+when to use prescribed treatments or seek medical care.
+
+==================================================
+6. RESPIRATORY INFECTIONS
+==================================================
+
+Respiratory infections affect parts of the respiratory system such as the nose,
+throat, airways, or lungs.
+
+The common cold is usually caused by viruses and may cause a runny nose,
+congestion, cough, sore throat, and mild fatigue.
+
+Influenza, commonly called the flu, is a viral respiratory illness that can
+cause fever, cough, sore throat, muscle aches, headache, chills, and fatigue.
+
+Pneumonia is an infection that causes inflammation in the lungs. Symptoms may
+include cough, fever, chills, chest discomfort, and difficulty breathing.
+
+Antibiotics treat certain bacterial infections but do not treat viral
+infections such as the common cold.
+
+==================================================
+7. NUTRITION
+==================================================
+
+Good nutrition provides the body with energy and nutrients required for growth,
+repair, and normal physiological functions.
+
+Major nutrients include carbohydrates, proteins, and fats. Vitamins and
+minerals are micronutrients required in smaller quantities.
+
+A balanced eating pattern can include vegetables, fruits, whole grains,
+protein-rich foods, and appropriate sources of healthy fats.
+
+Adequate hydration is important for normal body functions. Water needs vary
+depending on factors such as activity level, climate, diet, and individual
+health conditions.
+
+Excessive consumption of highly processed foods, added sugars, and sodium may
+increase health risks in some individuals.
+
+==================================================
+8. OBESITY AND HEALTHY WEIGHT
+==================================================
+
+Obesity is a chronic health condition involving excess body fat that can
+increase the risk of several diseases.
+
+Factors contributing to body weight can include genetics, eating patterns,
+physical activity, sleep, medications, environment, and socioeconomic factors.
+
+Obesity is associated with an increased risk of conditions such as type 2
+diabetes, hypertension, cardiovascular disease, sleep apnea, and certain
+other health conditions.
+
+Healthy weight management generally involves sustainable eating habits,
+regular physical activity, adequate sleep, and appropriate medical support
+when needed.
+
+==================================================
+9. MENTAL HEALTH
+==================================================
+
+Mental health refers to emotional, psychological, and social well-being.
+
+Mental health conditions can affect mood, thoughts, behavior, relationships,
+work, education, and daily activities.
+
+Depression can involve persistent sadness or loss of interest along with
+changes in sleep, appetite, energy, concentration, or feelings of worth.
+
+Anxiety disorders can involve excessive fear, worry, or anxiety that interferes
+with daily activities.
+
+Mental health treatment can include psychotherapy, medication when appropriate,
+support from healthcare professionals, lifestyle changes, and social support.
+
+If someone is experiencing a mental health emergency or is at immediate risk
+of harming themselves or others, emergency services or an appropriate crisis
+service should be contacted.
+
+==================================================
+10. SLEEP
+==================================================
+
+Sleep is important for physical health, brain function, memory, mood, and
+overall well-being.
+
+Insufficient sleep can affect concentration, reaction time, mood, and physical
+health.
+
+Good sleep habits can include maintaining a consistent sleep schedule, keeping
+the sleeping environment comfortable and dark, limiting stimulating activities
+before bedtime, and avoiding excessive caffeine late in the day.
+
+Persistent difficulty sleeping or excessive daytime sleepiness may require
+evaluation by a healthcare professional.
+
+==================================================
+11. PHYSICAL ACTIVITY
+==================================================
+
+Regular physical activity supports cardiovascular health, muscle strength,
+bone health, metabolic health, and mental well-being.
+
+Physical activity can include walking, cycling, swimming, running, strength
+training, sports, and other forms of movement.
+
+People who have been inactive can generally begin with manageable activities
+and gradually increase duration or intensity according to their abilities.
+
+Individuals with certain medical conditions may need guidance from a healthcare
+professional before beginning a new exercise program.
+
+==================================================
+12. CHOLESTEROL
+==================================================
+
+Cholesterol is a waxy substance needed by the body for certain biological
+functions. It is transported through the bloodstream by lipoproteins.
+
+Low-density lipoprotein, commonly called LDL, is often described as
+"bad cholesterol" because high levels can contribute to plaque formation in
+arteries.
+
+High-density lipoprotein, or HDL, is often called "good cholesterol" because
+it participates in transporting cholesterol away from tissues.
+
+High cholesterol usually does not cause noticeable symptoms. A blood test is
+used to measure cholesterol levels.
+
+Management can include dietary changes, physical activity, weight management,
+and medications when prescribed.
+
+==================================================
+13. KIDNEY HEALTH
+==================================================
+
+The kidneys filter waste products and excess fluid from the blood and help
+maintain electrolyte and fluid balance.
+
+Chronic kidney disease occurs when kidney function or kidney structure is
+abnormal for a prolonged period.
+
+Diabetes and high blood pressure are major causes of chronic kidney disease.
+
+Kidney disease may progress without obvious symptoms during its early stages.
+Blood and urine tests can help evaluate kidney function and detect kidney
+damage.
+
+Managing conditions such as diabetes and hypertension can help reduce the risk
+of kidney damage.
+
+==================================================
+14. LIVER HEALTH
+==================================================
+
+The liver performs many important functions including processing nutrients,
+producing proteins, and helping the body process various substances.
+
+Liver diseases can have many causes, including viral infections, alcohol,
+metabolic conditions, medications, and other factors.
+
+Fatty liver disease involves excess fat accumulation in the liver. Metabolic
+factors such as obesity and type 2 diabetes can increase its risk.
+
+Some liver conditions may not cause symptoms during their early stages.
+
+==================================================
+15. IMMUNE SYSTEM
+==================================================
+
+The immune system protects the body against harmful organisms and abnormal
+cells.
+
+White blood cells are important components of the immune response.
+
+Vaccines help train the immune system to recognize specific infectious agents
+and can reduce the risk of certain diseases and their complications.
+
+An immune response can produce inflammation. Inflammation is an important part
+of the body's defense system, although excessive or inappropriate inflammation
+can contribute to disease.
+
+==================================================
+16. INFECTION PREVENTION
+==================================================
+
+Hand hygiene is an important measure for reducing the spread of infectious
+organisms.
+
+Vaccination is an important public health strategy for preventing many
+infectious diseases.
+
+Respiratory hygiene measures, appropriate ventilation, staying home when sick,
+and following healthcare guidance can reduce transmission of respiratory
+infections.
+
+Healthcare facilities use infection-control procedures to reduce the spread
+of infectious organisms between patients and healthcare workers.
+
+==================================================
+17. FIRST AID
+==================================================
+
+First aid refers to immediate assistance provided to someone who is injured
+or suddenly becomes ill before professional medical care is available.
+
+For serious emergencies, contacting local emergency services should take
+priority.
+
+For severe bleeding, applying firm direct pressure with appropriate material
+can help control bleeding while emergency assistance is obtained.
+
+For suspected fractures, the injured area should generally be kept as still as
+possible while professional medical care is sought.
+
+Burns should be removed from the source of heat when safe, and appropriate
+first-aid measures should be used depending on the severity.
+
+==================================================
+18. MEDICATION SAFETY
+==================================================
+
+Medicines should be used according to instructions from a healthcare
+professional or the official product information.
+
+Patients should tell healthcare professionals about medicines, supplements,
+and allergies that may be relevant to their care.
+
+Taking more medicine than prescribed can be dangerous.
+
+Medication should generally not be shared with other people.
+
+Some medicines can interact with other medicines, foods, supplements, or
+medical conditions. Patients should ask a healthcare professional or pharmacist
+about potential interactions.
+
+==================================================
+19. HEALTH SCREENING
+==================================================
+
+Health screening involves checking for certain diseases or risk factors before
+symptoms appear.
+
+Examples of screening programs can include blood pressure measurement,
+cholesterol testing, diabetes screening, cancer screening, and other tests
+depending on age, risk factors, sex, family history, and medical guidance.
+
+Screening recommendations vary between individuals and populations.
+
+A healthcare professional can help determine which screenings are appropriate
+for a particular person.
+
+==================================================
+20. EMERGENCY WARNING SIGNS
+==================================================
+
+Some symptoms require urgent medical evaluation.
+
+Possible emergency warning signs can include severe difficulty breathing,
+severe chest pain or pressure, sudden weakness or numbness, sudden difficulty
+speaking, severe allergic reactions, uncontrolled severe bleeding, loss of
+consciousness, or other rapidly worsening symptoms.
+
+In a medical emergency, contact the appropriate local emergency service or
+seek emergency medical care.
+
+==================================================
+IMPORTANT NOTE
+==================================================
+
+This document is an educational knowledge base for an AI/RAG learning project.
+It is not a substitute for professional medical diagnosis, treatment, or
+individual medical advice.
+
+Healthcare information can depend on an individual's age, medical history,
+medications, symptoms, test results, and other circumstances. Medical
+decisions should be made with an appropriately qualified healthcare
+professional.
