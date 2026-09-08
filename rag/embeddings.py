@@ -93,3 +93,16 @@ if __name__ == "__main__":
 
     print("\nEmbedding dimensions:")
     print(len(embeddings[0]))
+
+    # =========================================================
+# Ask Gemini
+# =========================================================
+
+async def ask_gemini(prompt: str):
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+    )
+
+    return response.text
