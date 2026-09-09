@@ -3,9 +3,7 @@ import os
 from dotenv import load_dotenv
 from google import genai
 
-from loader import load_document, split_into_chunks
-
-
+from rag.loader import load_document, split_into_chunks
 # =========================================================
 # Load environment variables
 # =========================================================

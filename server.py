@@ -5,7 +5,8 @@ import time
 import uuid
 from collections import defaultdict
 from typing import Annotated
-
+from rag.retriever import retrieve
+from pathlib import Path
 from dotenv import load_dotenv
 
 from mcp import types
@@ -573,6 +574,61 @@ def divide(
         )
 
     return a / b
+
+#adding healthcare mcp tool
+@mcp.tool()
+def search_healthcare(
+    question: str,
+    top_k: int = 3
+) -> str:
+    """
+    Search the healthcare knowledge base using RAG.
+
+    Args:
+        question: Healthcare-related question.
+        top_k: Number of relevant chunks to retrieve.
+
+    Returns:
+        Relevant healthcare knowledge from the RAG vector database.
+    """
+
+    chunks = retrieve(
+        question,
+        top_k=top_k
+    )
+
+    if not chunks:
+        return "No relevant information found in the healthcare knowledge base."
+
+    return "\n\n".join(
+        f"Relevant Chunk {i + 1}:\n{chunk}"
+        for i, chunk in enumerate(chunks)
+    )
+
+# =========================================================
+# Healthcare Document as MCP Resource
+# =========================================================
+
+HEALTHCARE_DOCUMENT = Path(
+    "rag/documents/healthcare.txt"
+)
+
+logger.info("Registering healthcare://knowledge resource")
+
+
+@mcp.resource("healthcare://knowledge")
+def healthcare_knowledge() -> str:
+    """
+    Provide the healthcare knowledge document
+    as an MCP Resource.
+    """
+
+    if not HEALTHCARE_DOCUMENT.exists():
+        return "Healthcare knowledge document not found."
+
+    return HEALTHCARE_DOCUMENT.read_text(
+        encoding="utf-8"
+    )
 
 # =========================================================
 # Percentage Tool

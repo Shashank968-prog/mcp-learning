@@ -1,6 +1,7 @@
 import chromadb
 
-from embeddings import create_embeddings
+from rag.embeddings import create_embedding
+
 
 
 # =========================================================

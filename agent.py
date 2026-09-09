@@ -1,6 +1,59 @@
+
 # =========================================================
-# MCP AI Agent
-# Gemini decides which MCP tool to use
+# MCP AI AGENT
+#
+# Architecture:
+#
+#                    USER
+#                      |
+#                      v
+#                MAIN AGENT
+#                Gemini LLM
+#                      |
+#          +-----------+-----------+
+#          |           |           |
+#          v           v           v
+#     Calculator   Healthcare   Explanation
+#       Agent        Agent        Agent
+#          |           |
+#          |           v
+#          |      search_healthcare
+#          |           |
+#          +-----------+
+#                      |
+#                      v
+#                  MCP SERVER
+#                      |
+#                      v
+#                 MCP TOOLS
+#
+# Healthcare flow:
+#
+# User Question
+#      |
+#      v
+# Main Agent
+#      |
+#      v
+# Healthcare Agent
+#      |
+#      v
+# search_healthcare MCP Tool
+#      |
+#      v
+# RAG Retriever
+#      |
+#      v
+# ChromaDB
+#      |
+#      v
+# Relevant Chunks
+#      |
+#      v
+# Healthcare Agent
+#      |
+#      v
+# Final Answer
 # =========================================================
 
 
@@ -27,10 +80,7 @@ from mcp.client.streamable_http import streamable_http_client
 
 load_dotenv()
 
-# Gemini API key
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-# MCP authentication token
 MCP_API_TOKEN = os.getenv("MCP_API_TOKEN")
 
 
@@ -66,116 +116,123 @@ gemini = genai.Client(
 
 
 # =========================================================
-# Convert MCP Tools for Gemini
+# Convert MCP Tools to Gemini Format
 # =========================================================
 
 def convert_mcp_tools(mcp_tools):
-    """
-    Convert MCP Tool objects into dictionaries
-    that Gemini can understand.
-
-    Each MCP tool contains:
-
-    - name
-    - description
-    - input_schema
-
-    input_schema describes the arguments
-    required by the tool.
-    """
 
     tools = []
 
     for tool in mcp_tools:
 
-        tools.append({
-            "name": tool.name,
-            "description": tool.description or "",
-            "parameters": tool.input_schema,
-        })
+        tools.append(
+            {
+                "name": tool.name,
+                "description": tool.description or "",
+                "parameters": tool.input_schema,
+            }
+        )
 
     return tools
 
 
 # =========================================================
-# Ask Gemini What To Do
+# Parse Gemini JSON Response
 # =========================================================
 
-async def ask_agent(question, mcp_tools):
+def parse_json_response(response_text):
+
+    response_text = response_text.strip()
+
+    # Remove ```json
+    if response_text.startswith("```json"):
+
+        response_text = response_text[7:]
+
+    # Remove ``` if Gemini did not specify json
+    elif response_text.startswith("```"):
+
+        response_text = response_text[3:]
+
+    # Remove closing ```
+    if response_text.endswith("```"):
+
+        response_text = response_text[:-3]
+
+    response_text = response_text.strip()
+
+    return json.loads(response_text)
+
+
+# =========================================================
+# MAIN ROUTER AGENT
+# =========================================================
+
+async def route_agent(question):
     """
-    Ask Gemini to decide what the agent should do next.
-
-    Gemini can return:
-
-    1. An MCP tool to execute.
-
-    OR
-
-    2. A final answer.
-
-    Gemini only makes the decision.
-
-    Gemini does NOT execute the MCP tool.
+    Main agent decides which specialized agent
+    should handle the user's request.
     """
-
-    # Convert MCP tools into a Gemini-readable format
-    tool_definitions = convert_mcp_tools(
-        mcp_tools
-    )
-
-    # -----------------------------------------------------
-    # Build prompt for Gemini
-    # -----------------------------------------------------
 
     prompt = f"""
-You are a calculator AI agent.
+You are the main routing agent.
 
-Your job is to solve the user's request by using
-the available MCP calculator tools.
+Your job is to decide which specialized agent
+should handle the user's request.
 
-Available MCP tools:
+Available specialized agents:
 
-{json.dumps(tool_definitions, indent=2)}
+1. calculator_agent
+   - Handles mathematical calculations.
+   - Uses MCP calculator tools such as:
+     add, subtract, multiply, divide, percentage.
 
-User request:
+2. healthcare_agent
+   - Handles healthcare-related questions.
+   - Uses the MCP search_healthcare tool.
+   - The search_healthcare tool searches a healthcare
+     RAG knowledge base.
+
+3. explanation_agent
+   - Explains MCP, RAG, AI, programming, and
+     other technical concepts.
+   - Does not need calculator tools.
+
+User question:
 
 {question}
 
-You must decide what to do next.
+Return ONLY valid JSON.
 
-If you need to use an MCP tool,
-return ONLY valid JSON in this format:
-
-{{
-    "tool": "tool_name",
-    "arguments": {{
-        "argument_name": value
-    }}
-}}
-
-If the task is already complete,
-return ONLY valid JSON in this format:
+For calculator questions:
 
 {{
-    "final_answer": "your answer"
+    "handoff": "calculator_agent",
+    "task": "the task for the calculator agent"
 }}
 
-Important rules:
+For healthcare questions:
 
-- Do not calculate the answer yourself when an MCP
-  calculator tool is required.
-- Use the MCP calculator tool.
-- Return ONLY valid JSON.
+{{
+    "handoff": "healthcare_agent",
+    "task": "the healthcare question"
+}}
+
+For explanation or technical questions:
+
+{{
+    "handoff": "explanation_agent",
+    "task": "the explanation task"
+}}
+
+Important:
+
+- Return only JSON.
 - Do not use Markdown.
+- Choose healthcare_agent for questions about
+  diseases, symptoms, prevention, diabetes,
+  healthcare, medical knowledge, etc.
 """
-
-    # -----------------------------------------------------
-    # Call Gemini
-    # -----------------------------------------------------
-
-    # generate_content() is synchronous.
-    # Running it in a separate thread prevents it
-    # from blocking the asynchronous MCP event loop.
 
     response = await asyncio.to_thread(
         gemini.models.generate_content,
@@ -183,141 +240,197 @@ Important rules:
         contents=prompt,
     )
 
-    # Gemini returns its decision as text
     return response.text
 
 
 # =========================================================
-# Clean Gemini JSON Response
+# EXPLANATION AGENT
 # =========================================================
 
-def parse_agent_decision(response_text):
+async def explanation_agent(task):
     """
-    Convert Gemini's JSON response into a Python dictionary.
-
-    Gemini may sometimes return JSON inside Markdown
-    code fences.
-
-    Example:
-
-    ```json
-    {
-        "tool": "add",
-        "arguments": {
-            "a": 25,
-            "b": 35
-        }
-    }
-    ```
-
-    This function removes those code fences.
+    Specialized agent for explaining concepts.
     """
 
-    response_text = response_text.strip()
+    prompt = f"""
+You are an explanation agent.
 
-    # Remove ```json
-    if response_text.startswith("```json"):
-        response_text = response_text[7:]
+Explain the following topic clearly and simply.
 
-    # Remove ```
-    elif response_text.startswith("```"):
-        response_text = response_text[3:]
+Task:
 
-    # Remove closing ```
-    if response_text.endswith("```"):
-        response_text = response_text[:-3]
+{task}
 
-    response_text = response_text.strip()
+Give a useful explanation suitable for someone
+learning AI, RAG, MCP, or programming.
+"""
 
-    # Convert JSON text into Python dictionary
-    return json.loads(response_text)
+    response = await asyncio.to_thread(
+        gemini.models.generate_content,
+        model="gemini-2.5-flash",
+        contents=prompt,
+    )
+
+    return response.text
 
 
 # =========================================================
-# Agent Loop
+# MCP TOOL AGENT LOOP
 # =========================================================
 
 async def run_agent_loop(
     session,
     question,
     mcp_tools,
+    agent_type="general",
     max_iterations=5
 ):
     """
-    Run the AI agent repeatedly.
+    Run a specialized agent.
 
-    Flow:
+    The agent:
 
-        User question
-              ↓
-           Gemini
-              ↓
-        Select MCP tool
-              ↓
-         MCP Server
-              ↓
-          Tool Result
-              ↓
-           Gemini
-              ↓
-        Select next action
-              ↓
-         Final Answer
-
-    max_iterations prevents the agent from
-    running forever.
+        Question
+            |
+            v
+         Gemini
+            |
+            v
+       MCP Tool
+            |
+            v
+       MCP Server
+            |
+            v
+        Tool Result
+            |
+            v
+         Gemini
+            |
+            v
+       Final Answer
     """
 
-    # Start conversation with user's question
+    # Convert MCP tools to Gemini-readable definitions
+
+    tool_definitions = convert_mcp_tools(
+        mcp_tools
+    )
+
+    # Start conversation
+
     conversation = question
 
-    # -----------------------------------------------------
+    # =====================================================
     # Agent Loop
-    # -----------------------------------------------------
+    # =====================================================
 
     for iteration in range(max_iterations):
 
         print(
-            f"\n========== Agent Iteration "
-            f"{iteration + 1} =========="
+            f"\n========== {agent_type.upper()} AGENT "
+            f"ITERATION {iteration + 1} =========="
         )
 
         # -------------------------------------------------
-        # Ask Gemini what to do next
+        # Build prompt
         # -------------------------------------------------
 
-        agent_response = await ask_agent(
-            conversation,
-            mcp_tools
+        prompt = f"""
+You are a {agent_type} AI agent.
+
+You are connected to an MCP server.
+
+Available MCP tools:
+
+{json.dumps(tool_definitions, indent=2)}
+
+User request:
+
+{conversation}
+
+Your job is to solve the user's request.
+
+IMPORTANT RULES:
+
+1. If an MCP tool is required, use the appropriate
+   MCP tool.
+
+2. For healthcare questions, use the
+   search_healthcare MCP tool to retrieve
+   information from the healthcare RAG knowledge base.
+
+3. Do not invent healthcare information.
+
+4. For calculator questions, use the calculator
+   MCP tools instead of calculating yourself.
+
+5. After receiving an MCP tool result, determine
+   whether the user's request is complete.
+
+6. If the task is complete, return:
+
+{{
+    "final_answer": "your final answer"
+}}
+
+7. If another MCP tool is required, return:
+
+{{
+    "tool": "tool_name",
+    "arguments": {{
+        "argument": "value"
+    }}
+}}
+
+8. Return ONLY valid JSON.
+
+9. Do not return Markdown.
+
+Current conversation:
+
+{conversation}
+"""
+
+        # -------------------------------------------------
+        # Ask Gemini
+        # -------------------------------------------------
+
+        response = await asyncio.to_thread(
+            gemini.models.generate_content,
+            model="gemini-2.5-flash",
+            contents=prompt,
         )
 
         print("\nGemini Decision:")
-        print(agent_response)
+        print(response.text)
 
         # -------------------------------------------------
-        # Convert Gemini JSON into Python dictionary
+        # Parse Gemini decision
         # -------------------------------------------------
 
-        decision = parse_agent_decision(
-            agent_response
+        decision = parse_json_response(
+            response.text
         )
 
-        # -------------------------------------------------
-        # Check whether Gemini has finished
-        # -------------------------------------------------
+        # =================================================
+        # FINAL ANSWER
+        # =================================================
 
-        if decision.get("final_answer"):
+        if "final_answer" in decision:
+
+            final_answer = decision[
+                "final_answer"
+            ]
 
             print("\nFinal Answer:")
-            print(
-                decision["final_answer"]
-            )
+            print(final_answer)
 
-            return decision["final_answer"]
+            return final_answer
 
-        # -------------------------------------------------
-        # Make sure Gemini selected a tool
-        # -------------------------------------------------
+        # =================================================
+        # MCP TOOL
+        # =================================================
 
         if "tool" not in decision:
 
@@ -325,10 +438,6 @@ async def run_agent_loop(
                 "Gemini response did not contain "
                 "'tool' or 'final_answer'."
             )
-
-        # -------------------------------------------------
-        # Get selected MCP tool
-        # -------------------------------------------------
 
         tool_name = decision["tool"]
 
@@ -344,8 +453,26 @@ async def run_agent_loop(
         print(arguments)
 
         # -------------------------------------------------
-        # Execute MCP Tool
+        # Verify selected tool exists
         # -------------------------------------------------
+
+        available_tool_names = [
+            tool.name
+            for tool in mcp_tools
+        ]
+
+        if tool_name not in available_tool_names:
+
+            raise RuntimeError(
+                f"Gemini selected unknown MCP tool: "
+                f"{tool_name}"
+            )
+
+        # =================================================
+        # Call MCP Tool
+        # =================================================
+
+        print("\nCalling MCP Server...")
 
         tool_result = await session.call_tool(
             tool_name,
@@ -355,9 +482,9 @@ async def run_agent_loop(
         print("\nMCP Tool Result:")
         print(tool_result)
 
-        # -------------------------------------------------
-        # Extract readable text from MCP result
-        # -------------------------------------------------
+        # =================================================
+        # Extract MCP Text Result
+        # =================================================
 
         result_text = ""
 
@@ -370,177 +497,94 @@ async def run_agent_loop(
             )
 
             if text:
-                result_text += text + "\n"
+
+                result_text += (
+                    text + "\n"
+                )
 
         result_text = result_text.strip()
 
         print("\nMCP Result Text:")
         print(result_text)
 
-        # -------------------------------------------------
-        # Give MCP result back to Gemini
-        # -------------------------------------------------
+        # =================================================
+        # Give MCP Result Back to Gemini
+        # =================================================
 
         conversation += f"""
 
 MCP tool used:
+
 {tool_name}
 
 Arguments:
+
 {arguments}
 
 MCP tool result:
+
 {result_text}
 
-The MCP tool has completed its operation.
+The MCP tool has completed.
 
 Now decide what to do next.
 
 If the user's task is complete,
 return a final_answer.
 
-Otherwise, choose another MCP tool.
+Otherwise,
+select another MCP tool.
 """
 
-    # -----------------------------------------------------
-    # Maximum Iterations Reached
-    # -----------------------------------------------------
+    # =====================================================
+    # Maximum Iterations
+    # =====================================================
 
     return (
-        "Agent stopped because maximum iterations "
-        "were reached."
+        "Agent stopped because maximum "
+        "iterations were reached."
     )
 
 
 # =========================================================
-# Main Agent Router
+# AGENT HANDOFF
 # =========================================================
 
-# =========================================================
-# Main Agent Router
-# =========================================================
-
-async def route_agent(question):
+async def run_handoff(
+    session,
+    question,
+    mcp_tools
+):
     """
-    The main agent decides which specialized agent
-    should handle the user's request.
+    Main agent routes the question to
+    the appropriate specialized agent.
     """
 
-    prompt = f"""
-You are the main routing agent.
-
-Decide which specialized agent should handle
-the user's request.
-
-Available agents:
-
-1. calculator_agent
-   - Handles mathematical calculations
-   - Uses MCP calculator tools
-
-2. explanation_agent
-   - Explains MCP and AI concepts
-   - Does not use calculator tools
-
-User question:
-
-{question}
-
-Return ONLY JSON.
-
-For calculator questions:
-
-{{
-    "handoff": "calculator_agent",
-    "task": "the task to give to the calculator agent"
-}}
-
-For explanation questions:
-
-{{
-    "handoff": "explanation_agent",
-    "task": "the task to give to the explanation agent"
-}}
-"""
-
-    response = gemini.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
+    print(
+        "\n========== MAIN AGENT =========="
     )
 
-    return response.text
+    # =====================================================
+    # Ask Main Router
+    # =====================================================
 
-# =========================================================
-# Explanation Agent
-# =========================================================
-
-async def explanation_agent(task):
-    """
-    Specialized agent for explaining concepts.
-    """
-
-    prompt = f"""
-You are an explanation agent.
-
-Your job is to explain MCP and AI concepts
-clearly and simply.
-
-Task:
-
-{task}
-
-Give a clear explanation suitable for someone
-learning MCP.
-"""
-
-    response = gemini.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
+    router_response = await route_agent(
+        question
     )
-
-    return response.text
-
-
-# =========================================================
-# Agent Handoff
-# =========================================================
-
-async def run_handoff(session,question, mcp_tools):
-    """
-    Main agent decides which specialized agent
-    should handle the user's request.
-    """
-
-    print("\n========== Main Agent ==========")
-
-    # Ask the main agent which specialized
-    # agent should handle the request.
-    router_response = await route_agent(question)
 
     print("\nMain Agent Decision:")
     print(router_response)
 
-    
+    # =====================================================
+    # Parse Router Decision
+    # =====================================================
 
-    # Get the selected agent.
-    clean_response = router_response.strip()
-
-    if clean_response.startswith("```json"):
-        clean_response = clean_response[7:]
-
-    if clean_response.endswith("```"):
-        clean_response = clean_response[:-3]
-
-    clean_response = clean_response.strip()
-
-    decision = json.loads(clean_response)
+    decision = parse_json_response(
+        router_response
+    )
 
     handoff = decision["handoff"]
 
-    print("\nHandoff Target:")
-    print(handoff)
-    # Get the task that should be given
-    # to the selected agent.
     task = decision["task"]
 
     print("\nHandoff Target:")
@@ -549,89 +593,117 @@ async def run_handoff(session,question, mcp_tools):
     print("\nHandoff Task:")
     print(task)
 
-    # -----------------------------------------------------
-    # Handoff to Calculator Agent
-    # -----------------------------------------------------
+    # =====================================================
+    # Calculator Agent
+    # =====================================================
 
     if handoff == "calculator_agent":
 
-        print("\nHanding off to Calculator Agent...")
+        print(
+            "\nHanding off to Calculator Agent..."
+        )
 
         return await run_agent_loop(
             session=session,
             question=task,
             mcp_tools=mcp_tools,
+            agent_type="calculator",
         )
 
-    # -----------------------------------------------------
-    # Handoff to Explanation Agent
-    # -----------------------------------------------------
+    # =====================================================
+    # Healthcare Agent
+    # =====================================================
+
+    elif handoff == "healthcare_agent":
+
+        print(
+            "\nHanding off to Healthcare Agent..."
+        )
+
+        return await run_agent_loop(
+            session=session,
+            question=task,
+            mcp_tools=mcp_tools,
+            agent_type="healthcare",
+        )
+
+    # =====================================================
+    # Explanation Agent
+    # =====================================================
 
     elif handoff == "explanation_agent":
 
-        print("\nHanding off to Explanation Agent...")
+        print(
+            "\nHanding off to Explanation Agent..."
+        )
 
-        result = await explanation_agent(task)
+        result = await explanation_agent(
+            task
+        )
 
-        print("\nExplanation Agent Result:")
+        print(
+            "\nExplanation Agent Result:"
+        )
+
         print(result)
 
         return result
 
-    # -----------------------------------------------------
-    # Unknown agent
-    # -----------------------------------------------------
+    # =====================================================
+    # Unknown Agent
+    # =====================================================
 
     else:
 
         raise ValueError(
             f"Unknown handoff target: {handoff}"
         )
-    
 
 
 # =========================================================
-# Main Agent
+# MAIN
 # =========================================================
-
 
 async def main():
-    """
-    Complete Agent + MCP flow:
 
-        User
-          ↓
-        Gemini
-          ↓
-      Agent Decision
-          ↓
-       MCP Client
-          ↓
-       MCP Server
-          ↓
-      Calculator Tool
-          ↓
-       Tool Result
-          ↓
-        Gemini
-          ↓
-      Final Answer
+    """
+    Complete MCP Agent flow.
+
+    User
+      |
+      v
+    Main Agent
+      |
+      +-------------------+
+      |         |         |
+      v         v         v
+    Calc    Healthcare  Explanation
+    Agent      Agent       Agent
+      |         |
+      |         v
+      |    search_healthcare
+      |         |
+      |         v
+      |       RAG
+      |         |
+      +---------+
+                |
+                v
+           MCP Server
     """
 
     # =====================================================
     # MCP Authentication
     # =====================================================
 
-    # Your MCP server requires:
-
-    # Authorization: Bearer <token>
-
     headers = {
-        "Authorization": f"Bearer {MCP_API_TOKEN}"
+        "Authorization": (
+            f"Bearer {MCP_API_TOKEN}"
+        )
     }
 
     # =====================================================
-    # Create Authenticated HTTP Client
+    # Authenticated HTTP Client
     # =====================================================
 
     async with httpx.AsyncClient(
@@ -643,21 +715,19 @@ async def main():
         )
 
         # =================================================
-        # Connect using Streamable HTTP
+        # Connect to MCP Server
         # =================================================
 
         async with streamable_http_client(
             SERVER_URL,
-            http_client=http_client
+            http_client=http_client,
         ) as streams:
 
-            # Some MCP versions return additional
-            # transport information.
             read_stream = streams[0]
             write_stream = streams[1]
 
             # =================================================
-            # Create MCP Client Session
+            # Create MCP Session
             # =================================================
 
             async with ClientSession(
@@ -676,7 +746,7 @@ async def main():
                 )
 
                 # =============================================
-                # 2. Get Available MCP Tools
+                # 2. Get MCP Tools
                 # =============================================
 
                 result = await session.list_tools()
@@ -693,35 +763,81 @@ async def main():
                     )
 
                 # =============================================
-                # 3. User Question
+                # 3. Get MCP Resources
                 # =============================================
 
-                question="What is 25 + 35?"
+                resources = (
+                    await session.list_resources()
+                )
 
-                print("\nUser:")
+                print(
+                    "\nAvailable MCP Resources:"
+                )
+
+                for resource in resources.resources:
+
+                    print(
+                        "-",
+                        resource.uri
+                    )
+
+                # =============================================
+                # 4. Read Healthcare Resource
+                # =============================================
+
+                healthcare_resource = (
+                    await session.read_resource(
+                        "healthcare://knowledge"
+                    )
+                )
+
+                print(
+                    "\n========== Healthcare Resource =========="
+                )
+
+                for content in (
+                    healthcare_resource.contents
+                ):
+
+                    text = getattr(
+                        content,
+                        "text",
+                        None
+                    )
+
+                    if text:
+
+                        print(
+                            text[:1000]
+                        )
+
+                # =============================================
+                # 5. User Question
+                # =============================================
+
+                question = (
+                    "What are the common symptoms "
+                    "of diabetes?"
+                )
+
+                print(
+                    "\nUser:"
+                )
+
                 print(question)
 
-                #start agent
+                # =============================================
+                # 6. Main Agent + Handoff
+                # =============================================
 
-                await run_handoff(
-                    session,
-                    question,
-                    result.tools,
+                final_answer = await run_handoff(
+                    session=session,
+                    question=question,
+                    mcp_tools=result.tools,
                 )
 
                 # =============================================
-                # 4. Run Agent Loop
-                # =============================================
-
-                final_answer = await run_agent_loop(
-                    session,
-                    question,
-                    result.tools,
-                    max_iterations=5
-                )
-
-                # =============================================
-                # 5. Display Final Answer
+                # 7. Final Output
                 # =============================================
 
                 print(
@@ -740,9 +856,7 @@ async def main():
                     "\nFinal Answer:"
                 )
 
-                print(
-                    final_answer
-                )
+                print(final_answer)
 
 
 # =========================================================
@@ -750,4 +864,7 @@ async def main():
 # =========================================================
 
 if __name__ == "__main__":
-    asyncio.run(main())
+
+    asyncio.run(
+        main()
+    )
