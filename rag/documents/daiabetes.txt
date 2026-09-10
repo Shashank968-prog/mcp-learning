@@ -1,0 +1,11 @@
+Diabetes is a chronic condition that affects how the body processes blood glucose.
+
+Common symptoms of diabetes may include increased thirst, frequent urination,
+increased hunger, fatigue, blurred vision, slow-healing wounds, and unexplained
+weight loss.
+
+Type 1 diabetes occurs when the immune system attacks insulin-producing cells
+in the pancreas.
+
+Type 2 diabetes occurs when the body becomes resistant to insulin or does not
+produce enough insulin.

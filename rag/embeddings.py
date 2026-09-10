@@ -3,7 +3,9 @@ import os
 from dotenv import load_dotenv
 from google import genai
 
-from rag.loader import load_document, split_into_chunks
+from rag.loader import load_documents, split_into_chunks
+
+
 # =========================================================
 # Load environment variables
 # =========================================================
@@ -42,7 +44,7 @@ def create_embedding(text):
 
 
 # =========================================================
-# Create embeddings for all chunks
+# Create embeddings for multiple chunks
 # =========================================================
 
 def create_embeddings(chunks):
@@ -51,7 +53,9 @@ def create_embeddings(chunks):
 
     for i, chunk in enumerate(chunks):
 
-        print(f"Creating embedding {i + 1}/{len(chunks)}")
+        print(
+            f"Creating embedding {i + 1}/{len(chunks)}"
+        )
 
         vector = create_embedding(chunk)
 
@@ -61,38 +65,6 @@ def create_embeddings(chunks):
 
 
 # =========================================================
-# Test embedding pipeline
-# =========================================================
-
-if __name__ == "__main__":
-
-    # Load healthcare document
-    document = load_document()
-
-    print("Document loaded.")
-    print("Characters:", len(document))
-
-    # Split document into chunks
-    chunks = split_into_chunks(document)
-
-    print("Number of chunks:", len(chunks))
-
-    # Create embeddings
-    embeddings = create_embeddings(chunks)
-
-    print("\nEmbedding generation completed.")
-
-    # Show information about first embedding
-    print("\nFirst chunk:")
-    print(chunks[0])
-
-    print("\nFirst embedding:")
-    print(embeddings[0])
-
-    print("\nEmbedding dimensions:")
-    print(len(embeddings[0]))
-
-    # =========================================================
 # Ask Gemini
 # =========================================================
 
@@ -104,3 +76,46 @@ async def ask_gemini(prompt: str):
     )
 
     return response.text
+
+
+# =========================================================
+# Test embedding pipeline
+# =========================================================
+
+if __name__ == "__main__":
+
+    documents = load_documents()
+
+    print(
+        f"Documents loaded: {len(documents)}"
+    )
+
+    for document in documents:
+
+        source = document["source"]
+        content = document["content"]
+
+        print("\n================================")
+        print(f"Source: {source}")
+        print(
+            f"Characters: {len(content)}"
+        )
+
+        chunks = split_into_chunks(content)
+
+        print(
+            f"Number of chunks: {len(chunks)}"
+        )
+
+        embeddings = create_embeddings(
+            chunks
+        )
+
+        print(
+            f"Embeddings created: {len(embeddings)}"
+        )
+
+        print(
+            f"Embedding dimensions: "
+            f"{len(embeddings[0])}"
+        )

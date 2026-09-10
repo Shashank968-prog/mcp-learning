@@ -1,115 +1,75 @@
-
 import chromadb
 
-from embeddings import create_embeddings
+from rag.loader import load_documents, split_into_chunks
+from rag.embeddings import create_embedding
 
-
-# =========================================================
-# Create ChromaDB client
-# =========================================================
 
 client = chromadb.PersistentClient(
     path="rag/chroma_db"
 )
 
 
-# =========================================================
-# Create or load collection
-# =========================================================
-
 collection = client.get_or_create_collection(
     name="healthcare_knowledge"
 )
 
 
-# =========================================================
-# Load healthcare document
-# =========================================================
+def build_vector_store():
+    documents = load_documents()
 
-with open(
-    "rag/documents/healthcare.txt",
-    "r",
-    encoding="utf-8"
-) as file:
+    print(f"Loaded {len(documents)} source documents.")
 
-    document = file.read()
+    all_chunks = []
+    all_embeddings = []
+    all_metadatas = []
+    all_ids = []
 
+    chunk_id = 0
 
-# =========================================================
-# Split document into chunks
-# =========================================================
+    for document in documents:
 
-chunk_size = 500
+        source = document["source"]
+        content = document["content"]
 
-chunks = [
-    document[i:i + chunk_size]
-    for i in range(
-        0,
-        len(document),
-        chunk_size
+        chunks = split_into_chunks(content)
+
+        print(
+            f"{source}: created {len(chunks)} chunks"
+        )
+
+        for chunk in chunks:
+
+            embedding = create_embedding(chunk)
+
+            all_chunks.append(chunk)
+
+            all_embeddings.append(
+                embedding
+            )
+
+            all_metadatas.append({
+                "source": source
+            })
+
+            all_ids.append(
+                f"chunk_{chunk_id}"
+            )
+
+            chunk_id += 1
+
+    collection.add(
+        ids=all_ids,
+        documents=all_chunks,
+        embeddings=all_embeddings,
+        metadatas=all_metadatas
     )
-]
+
+    print()
+    print(
+        f"Stored {len(all_chunks)} chunks from "
+        f"{len(documents)} sources."
+    )
 
 
-# =========================================================
-# Generate embeddings
-# =========================================================
-
-embeddings = create_embeddings(chunks)
-
-
-# =========================================================
-# Store chunks + embeddings
-# =========================================================
-
-collection.add(
-    ids=[
-        f"chunk_{i}"
-        for i in range(len(chunks))
-    ],
-
-    documents=chunks,
-
-    embeddings=embeddings
-)
-
-
-print("Embeddings stored in ChromaDB.")
-
-print(
-    "Number of stored documents:",
-    collection.count()
-)
-
-
-# =========================================================
-# Test vector search
-# =========================================================
-
-query = "What is diabetes?"
-
-
-query_embedding = create_embeddings(
-    [query]
-)[0]
-
-
-results = collection.query(
-    query_embeddings=[query_embedding],
-    n_results=3
-)
-
-
-# =========================================================
-# Display search results
-# =========================================================
-
-print("\n========== Vector Search Results ==========")
-
-for i, document in enumerate(
-    results["documents"][0]
-):
-
-    print(f"\nResult {i + 1}:")
-    print(document)
-
+if __name__ == "__main__":
+    build_vector_store()

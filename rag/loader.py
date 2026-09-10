@@ -1,58 +1,43 @@
 from pathlib import Path
 
 
-# =========================================================
-# Document path
-# =========================================================
-
-DOCUMENT_PATH = Path(__file__).parent / "documents" / "healthcare.txt"
+DOCUMENTS_DIR = Path("rag/documents")
 
 
-# =========================================================
-# Load document
-# =========================================================
+def load_documents():
+    """
+    Load all .txt documents from rag/documents.
+    Returns a list of dictionaries containing:
+    - source
+    - content
+    """
+    documents = []
 
-def load_document():
+    for file_path in DOCUMENTS_DIR.glob("*.txt"):
+        content = file_path.read_text(encoding="utf-8")
 
-    with open(DOCUMENT_PATH, "r", encoding="utf-8") as file:
-        text = file.read()
+        documents.append({
+            "source": file_path.name,
+            "content": content
+        })
 
-    return text
+    return documents
 
 
-# =========================================================
-# Split document into chunks
-# =========================================================
-
-def split_into_chunks(text, chunk_size=500):
-
+def split_into_chunks(text: str, chunk_size: int = 500, overlap: int = 100):
+    """
+    Split text into overlapping chunks.
+    """
     chunks = []
 
-    for start in range(0, len(text), chunk_size):
+    start = 0
 
-        chunk = text[start:start + chunk_size]
+    while start < len(text):
+        end = start + chunk_size
+        chunk = text[start:end]
 
         chunks.append(chunk)
 
+        start += chunk_size - overlap
+
     return chunks
-
-
-# =========================================================
-# Test
-# =========================================================
-
-if __name__ == "__main__":
-
-    document = load_document()
-
-    print("Document loaded.")
-    print("Characters:", len(document))
-
-    chunks = split_into_chunks(document)
-
-    print("Number of chunks:", len(chunks))
-
-    for i, chunk in enumerate(chunks):
-
-        print(f"\n========== Chunk {i + 1} ==========")
-        print(chunk)

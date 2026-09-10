@@ -575,34 +575,69 @@ def divide(
 
     return a / b
 
-#adding healthcare mcp tool
+# =========================================================
+# Healthcare RAG Search Tool - Multi-Source
+# =========================================================
+
 @mcp.tool()
 def search_healthcare(
     question: str,
     top_k: int = 3
 ) -> str:
     """
-    Search the healthcare knowledge base using RAG.
+    Search multiple healthcare knowledge sources
+    using the RAG vector database.
 
     Args:
         question: Healthcare-related question.
         top_k: Number of relevant chunks to retrieve.
 
     Returns:
-        Relevant healthcare knowledge from the RAG vector database.
+        Relevant healthcare knowledge with source information.
     """
 
-    chunks = retrieve(
+    logger.info(
+        "search_healthcare() called: question=%s top_k=%s",
+        question,
+        top_k
+    )
+
+    results = retrieve(
         question,
         top_k=top_k
     )
 
-    if not chunks:
-        return "No relevant information found in the healthcare knowledge base."
+    if not results:
+        return (
+            "No relevant information found "
+            "in the healthcare knowledge base."
+        )
+
+    formatted_results = []
+
+    for i, result in enumerate(
+        results,
+        start=1
+    ):
+
+        content = result.get(
+            "content",
+            ""
+        )
+
+        source = result.get(
+            "source",
+            "unknown"
+        )
+
+        formatted_results.append(
+            f"Relevant Chunk {i}\n"
+            f"Source: {source}\n\n"
+            f"{content}"
+        )
 
     return "\n\n".join(
-        f"Relevant Chunk {i + 1}:\n{chunk}"
-        for i, chunk in enumerate(chunks)
+        formatted_results
     )
 
 # =========================================================
